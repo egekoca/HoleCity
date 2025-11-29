@@ -33,6 +33,7 @@ function UI() {
   const settings = useStore((s) => s.settings);
   const updateSettings = useStore((s) => s.updateSettings);
   const startSpectating = useStore((s) => s.startSpectating);
+  const globalHighScore = useStore((s) => s.globalHighScore);
   
   const [leaderboard, setLeaderboard] = useState([]);
   const [coords, setCoords] = useState({ x: 0, z: 0 });
@@ -415,8 +416,30 @@ function UI() {
                        </button>
                     </div>
 
+                    {/* ALL TIME BEST SECTION */}
+                    <div className="bg-[#121212] pt-8 pb-4 flex justify-center relative overflow-hidden">
+                       {/* Background Glow */}
+                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-purple-600/30 blur-[80px] rounded-full pointer-events-none animate-pulse"></div>
+                       
+                       <div className="relative z-10 text-center flex flex-col items-center">
+                          <h3 className="text-purple-400 font-black text-lg tracking-[0.4em] mb-2 uppercase drop-shadow-[0_2px_2px_rgba(0,0,0,1)]">
+                             All Time Best
+                          </h3>
+                          
+                          <div className="text-6xl md:text-7xl font-titan text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 via-yellow-400 to-yellow-600 drop-shadow-[0_4px_0_rgba(161,98,7,0.5)] transform hover:scale-105 transition-transform duration-300 mb-2">
+                             {globalHighScore?.score ? globalHighScore.score.toLocaleString() : '0'}
+                          </div>
+                          
+                          <div className="flex items-center justify-center gap-3 bg-black/40 px-6 py-2 rounded-full border border-white/10 backdrop-blur-sm">
+                             <span className="text-2xl text-white font-black tracking-wide drop-shadow-md">
+                                {globalHighScore?.name || '---'}
+                             </span>
+                          </div>
+                       </div>
+                    </div>
+
                     {/* Table */}
-                    <div className="p-6 overflow-x-auto bg-[#121212]">
+                    <div className="p-6 overflow-x-auto bg-[#121212] border-t border-white/5">
                        <table className="w-full border-separate border-spacing-y-2">
                           <thead>
                              <tr className="text-gray-500 text-xs font-black uppercase tracking-[0.2em]">
@@ -478,7 +501,7 @@ function UI() {
         </>
       )}
 
-      {/* --- PLAYING HUD --- */}
+      {/* ... PLAYING HUD ... */}
       {gameStatus === 'playing' && !isGameOver && (
         <>
           {/* Top Left: Stats & Minimap */}
@@ -506,7 +529,7 @@ function UI() {
         </>
       )}
 
-      {/* --- TOP RIGHT: LAST WINNER & LEADERBOARD --- */}
+      {/* ... TOP RIGHT: LAST WINNER & LEADERBOARD ... */}
       <div className="absolute top-4 right-4 z-10 pointer-events-none flex flex-col items-end gap-2">
         
         {/* LAST WINNER */}
@@ -538,7 +561,7 @@ function UI() {
         </div>
       </div>
 
-      {/* --- CHAT --- */}
+      {/* ... CHAT ... */}
       {!settings.hideChat && (
         <div className="absolute bottom-4 left-4 z-20 w-80 flex flex-col gap-2 pointer-events-auto">
           <div className="bg-black/40 backdrop-blur-sm rounded-lg p-2 h-40 overflow-y-auto flex flex-col gap-1 scrollbar-hide mask-image-gradient">
@@ -564,7 +587,7 @@ function UI() {
         </div>
       )}
 
-      {/* --- GAME OVER MODAL --- */}
+      {/* ... GAME OVER MODAL ... */}
       {isGameOver && gameStatus === 'playing' && (
         <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 animate-pop">
           <div className="bg-[#1a1a1a] border-4 border-[#333] rounded-2xl p-8 text-center max-w-md w-full mx-4 shadow-2xl relative">

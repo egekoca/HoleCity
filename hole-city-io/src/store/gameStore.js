@@ -31,6 +31,7 @@ export const useStore = create((set, get) => ({
   globalAnnouncements: [],
   isHallOfFameOpen: false,
   honorBoardData: [], 
+  globalHighScore: { name: '---', score: 0 }, // Global En Yüksek Skor
 
   // Skin
   selectedSkin: 'default',
@@ -119,8 +120,18 @@ export const useStore = create((set, get) => ({
   },
 
   fetchHonorBoard: async () => {
+     // 1. Global High Score Sorgusu (Tüm zamanların en iyisi)
+     const { data: globalBest } = await supabase
+        .from('game_results')
+        .select('*')
+        .order('score', { ascending: false })
+        .limit(1);
+
+     const globalRecord = globalBest?.[0] ? { name: globalBest[0].nickname, score: globalBest[0].score } : { name: '---', score: 0 };
+
+     // 2. Odalar için döngü
      const promises = ROOMS.map(async (room) => {
-        // 1. Last Winner
+        // Last Winner
         const { data: lastGame } = await supabase
            .from('game_results')
            .select('*')
@@ -128,7 +139,7 @@ export const useStore = create((set, get) => ({
            .order('created_at', { ascending: false })
            .limit(1);
 
-        // 2. High Score
+        // High Score (Room Specific)
         const { data: highScore } = await supabase
            .from('game_results')
            .select('*')
@@ -149,7 +160,7 @@ export const useStore = create((set, get) => ({
      const results = await Promise.all(promises);
      results.sort((a, b) => a.id.localeCompare(b.id));
      
-     set({ honorBoardData: results });
+     set({ honorBoardData: results, globalHighScore: globalRecord });
   },
 
   joinGame: (name, roomId = 'FFA-1') => {
@@ -287,7 +298,6 @@ export const useStore = create((set, get) => ({
   },
 
   addPlayerScore: (pts, objId) => {
-    // Spectator puan alamaz
     if (get().isSpectating) return;
 
     playSound(500);
@@ -324,7 +334,7 @@ export const useStore = create((set, get) => ({
     playExplosion();
     set((state) => {
        if (entityId === 'player') {
-          if (state.isSpectating) return {}; // Spectator etkilenmez
+          if (state.isSpectating) return {}; 
           const newScore = Math.floor(state.score * 0.6);
           const newScale = Math.max(1, 1 + newScore * 0.0005);
           gameState.playerScale = newScale;
@@ -359,7 +369,7 @@ export const useStore = create((set, get) => ({
         const bonus = preyBot.score + 100;
         
         if (predatorId === 'player') {
-           if (state.isSpectating) return {}; // Spectator yiyemez
+           if (state.isSpectating) return {}; 
 
            playSound(600);
            const newScore = state.score + bonus;
