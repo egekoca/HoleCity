@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { GAME_DURATION, OBJECT_COUNT } from '../utils/constants';
 import { generateObjects, generateBots, createObject } from '../utils/helpers';
-import { playSound, playExplosion } from '../utils/audio'; // playExplosion eklenecek
+import { playSound, playExplosion } from '../utils/audio';
 import { gameState } from '../utils/gameState';
 
 export const useStore = create((set, get) => ({
@@ -13,7 +13,10 @@ export const useStore = create((set, get) => ({
   objects: [],
   bots: [],
   objectsToRemove: new Set(),
-  bombHitTime: 0, // Bomba yeme zamanı (Efekt için)
+  bombHitTime: 0,
+  
+  // Chat State
+  chatMessages: [],
 
   startGame: () => {
     gameState.playerScale = 1;
@@ -27,9 +30,16 @@ export const useStore = create((set, get) => ({
       objects: generateObjects(),
       bots: generateBots(),
       objectsToRemove: new Set(),
-      bombHitTime: 0
+      bombHitTime: 0,
+      chatMessages: [{ id: 1, sender: 'System', text: 'Welcome to Hole City FFA!', color: '#ffff00' }]
     });
   },
+
+  addMessage: (sender, text, color = '#fff') => set((state) => {
+    const newMsg = { id: Date.now() + Math.random(), sender, text, color };
+    // Son 15 mesajı tut
+    return { chatMessages: [...state.chatMessages.slice(-14), newMsg] };
+  }),
 
   endGame: (reason) => set({ isGameOver: true, gameOverReason: reason }),
 
@@ -72,20 +82,18 @@ export const useStore = create((set, get) => ({
   },
 
   applyBombPenalty: (entityId) => {
-    playExplosion(); // Patlama sesi
+    playExplosion();
     set((state) => {
-       // Eğer OYUNCU ise
        if (entityId === 'player') {
-          const newScore = Math.floor(state.score * 0.6); // %40 azalma
-          const newScale = Math.max(1, 1 + newScore * 0.0004); // Minimum 1
+          const newScore = Math.floor(state.score * 0.6);
+          const newScale = Math.max(1, 1 + newScore * 0.0004);
           gameState.playerScale = newScale;
           return { 
             score: newScore, 
-            holeScale: newScale,
-            bombHitTime: Date.now() // Efekti tetikle
+            holeScale: newScale, 
+            bombHitTime: Date.now() 
           };
        }
-       // Eğer BOT ise
        else {
           const newBots = state.bots.map(b => {
              if (b.id === entityId) {
@@ -103,7 +111,6 @@ export const useStore = create((set, get) => ({
     });
   },
 
-  // Genel yeme fonksiyonu (predator: avcı, prey: av)
   eatEntity: (predatorId, preyId) => {
     set((state) => {
       const preyBot = state.bots.find((b) => b.id === preyId);

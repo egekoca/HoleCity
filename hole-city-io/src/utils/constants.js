@@ -26,14 +26,14 @@ export const colors = {
 
 // Nesne tipleri ve ağırlıkları
 export const objectTypes = [
-  { type: 'human', weight: 30, points: 10, size: 0.5 },
-  { type: 'dog', weight: 8, points: 8, size: 0.4 },
-  { type: 'cone', weight: 10, points: 5, size: 0.3 },
-  { type: 'hydrant', weight: 8, points: 12, size: 0.5 },
-  { type: 'trash', weight: 8, points: 8, size: 0.4 },
-  { type: 'tree', weight: 15, points: 20, size: 0.8 },
-  { type: 'lamp', weight: 10, points: 25, size: 0.9 },
-  { type: 'bench', weight: 8, points: 22, size: 0.7 },
+  { type: 'human', weight: 50, points: 10, size: 0.5 }, // Weight artırıldı
+  { type: 'dog', weight: 15, points: 8, size: 0.4 },
+  { type: 'cone', weight: 20, points: 5, size: 0.3 },
+  { type: 'hydrant', weight: 15, points: 12, size: 0.5 },
+  { type: 'trash', weight: 15, points: 8, size: 0.4 },
+  { type: 'tree', weight: 30, points: 20, size: 0.8 }, // Weight artırıldı
+  { type: 'lamp', weight: 20, points: 25, size: 0.9 }, // Weight artırıldı
+  { type: 'bench', weight: 15, points: 22, size: 0.7 },
   { type: 'car', weight: 12, points: 50, size: 1.2 },
   { type: 'taxi', weight: 5, points: 55, size: 1.2 },
   { type: 'bus', weight: 4, points: 100, size: 1.8 },

@@ -12,8 +12,8 @@ const DeepHole = memo(function DeepHole({ scale, color, isPlayer }) {
     <group>
       {/* --- MASKE (Zemin ve Yolların görünmemesi için) --- */}
       {/* Bu görünmez disk, stencil buffer'a '1' yazar. Zemin '1' olmayan yere çizilir. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.1, 0]} renderOrder={-1}>
-        <circleGeometry args={[radius * 0.92, 48]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.2, 0]} renderOrder={-999}>
+        <circleGeometry args={[radius * 0.99, 64]} />
         <meshBasicMaterial
           colorWrite={false}
           depthWrite={false}

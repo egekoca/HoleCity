@@ -15,6 +15,7 @@ function App() {
       <Canvas 
         camera={{ fov: 50, near: 0.1, far: 1500 }} 
         dpr={[1, 1.5]}
+        gl={{ stencil: true, alpha: false, antialias: true }}
       >
         <color attach="background" args={['#87CEEB']} />
         {/* <fog attach="fog" args={['#87CEEB', 100, 300]} /> */}
