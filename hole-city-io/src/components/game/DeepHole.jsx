@@ -1,17 +1,21 @@
 import { memo } from 'react';
 import * as THREE from 'three';
+import { MeshWobbleMaterial } from '@react-three/drei';
 import { HOLE_DEPTH } from '../../utils/constants';
 
 // --- 3D DÜZ SİLİNDİR DELİK ---
-const DeepHole = memo(function DeepHole({ scale, color, isPlayer }) {
+const DeepHole = memo(function DeepHole({ scale, color, isPlayer, skinId }) {
   const depth = HOLE_DEPTH;
   const radius = scale;
   const segments = 10;
 
+  const isLegendary = skinId === 'legendary';
+  // Eğer oyuncuysa skin rengini kullan, yoksa bot rengi
+  const ringColor = isLegendary ? '#00ffff' : (color || "#3498db");
+
   return (
     <group>
       {/* --- MASKE (Zemin ve Yolların görünmemesi için) --- */}
-      {/* Bu görünmez disk, stencil buffer'a '1' yazar. Zemin '1' olmayan yere çizilir. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.2, 0]} renderOrder={-999}>
         <circleGeometry args={[radius * 0.99, 64]} />
         <meshBasicMaterial
@@ -24,23 +28,53 @@ const DeepHole = memo(function DeepHole({ scale, color, isPlayer }) {
         />
       </mesh>
 
-      {/* Üst kenar - parlak halka */}
+      {/* --- ÜST HALKA (SKIN BURADA) --- */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 0]}>
         <ringGeometry args={[radius * 0.92, radius * 1.1, 48]} />
-        <meshStandardMaterial 
-          color={isPlayer ? "#3498db" : color} 
-          roughness={0.3}
-          metalness={0.5}
-        />
+        
+        {isLegendary ? (
+           // SADECE HALKA ÜZERİNDE EFEKT (Titreme)
+           <MeshWobbleMaterial 
+              attach="material"
+              color="#00ffff" 
+              emissive="#00ffff"
+              emissiveIntensity={2}
+              factor={0.2} 
+              speed={3} 
+           />
+        ) : (
+           // STANDART RENK
+           <meshStandardMaterial 
+             color={ringColor} 
+             roughness={0.3}
+             metalness={0.5}
+           />
+        )}
       </mesh>
 
-      {/* Üst ağız - siyah delik girişi */}
+      {/* --- LEGENDARY EKSTRA EFEKT (SADECE YATAY HALKA) --- */}
+      {/* DİKKAT: Asla cylinder kullanma, sadece ring kullan */}
+      {isLegendary && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.15, 0]}>
+            <ringGeometry args={[radius * 1.15, radius * 1.25, 32]} />
+            <meshBasicMaterial 
+              color="#e040fb" 
+              transparent 
+              opacity={0.6} 
+              side={THREE.DoubleSide}
+            />
+        </mesh>
+      )}
+
+      {/* --- DELİK GÖVDESİ (STANDART) --- */}
+      
+      {/* 1. Siyah Ağız */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
         <circleGeometry args={[radius * 0.92, 48]} />
         <meshBasicMaterial color="#050505" />
       </mesh>
 
-      {/* Deliğin iç duvarı - DÜZ SİLİNDİR */}
+      {/* 2. İç Duvar (Siyah) */}
       <mesh position={[0, -depth / 2, 0]}>
         <cylinderGeometry args={[radius, radius, depth, 48, 1, true]} />
         <meshStandardMaterial 
@@ -51,7 +85,7 @@ const DeepHole = memo(function DeepHole({ scale, color, isPlayer }) {
         />
       </mesh>
 
-      {/* Dış duvar - hafif kenar */}
+      {/* 3. Dış Duvar (Görünmez/Koruma) */}
       <mesh position={[0, -depth / 2, 0]}>
         <cylinderGeometry args={[radius * 1.01, radius * 1.01, depth, 48, 1, true]} />
         <meshStandardMaterial 
@@ -61,7 +95,7 @@ const DeepHole = memo(function DeepHole({ scale, color, isPlayer }) {
         />
       </mesh>
 
-      {/* Derinlik halkaları - düz silindir için eşit aralıklı */}
+      {/* 4. Derinlik Halkaları (Gri - Standart) */}
       {Array.from({ length: segments }, (_, i) => {
         const d = (i + 1) / (segments + 1);
         const brightness = Math.floor(30 - d * 25);
@@ -73,20 +107,7 @@ const DeepHole = memo(function DeepHole({ scale, color, isPlayer }) {
         );
       })}
 
-      {/* Dikey çizgiler */}
-      {Array.from({ length: 8 }, (_, i) => {
-        const angle = (i / 8) * Math.PI * 2;
-        const x = Math.cos(angle) * radius * 0.98;
-        const z = Math.sin(angle) * radius * 0.98;
-        return (
-          <mesh key={`line${i}`} position={[x, -depth / 2, z]}>
-            <boxGeometry args={[0.05, depth, 0.05]} />
-            <meshBasicMaterial color="#1a1a1a" />
-          </mesh>
-        );
-      })}
-
-      {/* Dip */}
+      {/* 5. Dip (Siyah) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -depth + 0.05, 0]}>
         <circleGeometry args={[radius * 0.98, 48]} />
         <meshBasicMaterial color="#000000" />

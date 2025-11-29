@@ -73,3 +73,13 @@ export const totalWeight = objectTypes.reduce((s, t) => s + t.weight, 0);
 // Bot isimleri ve renkleri
 export const botNames = ['Chaos', 'Vortex', 'Titan', 'Shadow', 'Ghost', 'Venom', 'Omega', 'Hunter'];
 export const botColors = ['#FF5252', '#4CAF50', '#FFC107', '#E040FB', '#00BCD4', '#FF5722', '#9C27B0', '#3F51B5'];
+
+// Skin Galerisi
+export const SKINS = [
+  { id: 'default', name: 'Classic', color: '#2980b9', type: 'standard', price: 0 },
+  { id: 'red', name: 'Crimson', color: '#e74c3c', type: 'standard', price: 0 },
+  { id: 'green', name: 'Emerald', color: '#2ecc71', type: 'standard', price: 0 },
+  { id: 'purple', name: 'Void', color: '#9b59b6', type: 'standard', price: 0 },
+  { id: 'gold', name: 'Midas', color: '#f1c40f', type: 'standard', price: 0 },
+  { id: 'legendary', name: 'ZEUS', color: '#00ffff', type: 'legendary', price: 0 } // Elektrikli
+];

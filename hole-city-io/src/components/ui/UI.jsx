@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useStore } from '../../store/gameStore';
 import { formatTime } from '../../utils/helpers';
 import { gameState } from '../../utils/gameState';
-import { MAP_SIZE, ROOMS } from '../../utils/constants';
+import { MAP_SIZE, ROOMS, SKINS } from '../../utils/constants';
 
 function UI() {
   const score = useStore((s) => s.score);
@@ -28,6 +28,8 @@ function UI() {
   const isWalletConnected = useStore((s) => s.isWalletConnected);
   const savedNickname = useStore((s) => s.playerName); 
   const currentRoomId = useStore((s) => s.currentRoomId);
+  const selectedSkin = useStore((s) => s.selectedSkin);
+  const setSkin = useStore((s) => s.setSkin);
   
   const [leaderboard, setLeaderboard] = useState([]);
   const [coords, setCoords] = useState({ x: 0, z: 0 });
@@ -38,6 +40,7 @@ function UI() {
   const [roomTimes, setRoomTimes] = useState({}); 
   const [error, setError] = useState('');
   const [visibleAnnouncement, setVisibleAnnouncement] = useState(null);
+  const [isSkinGalleryOpen, setIsSkinGalleryOpen] = useState(false);
   const chatEndRef = useRef(null);
 
   // Nickname güncelleme
@@ -70,12 +73,14 @@ function UI() {
            returnToLobby();
         } else if (isHallOfFameOpen) {
            toggleHallOfFame(false);
+        } else if (isSkinGalleryOpen) {
+           setIsSkinGalleryOpen(false);
         }
       }
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [gameStatus, returnToLobby, isHallOfFameOpen, toggleHallOfFame]);
+  }, [gameStatus, returnToLobby, isHallOfFameOpen, toggleHallOfFame, isSkinGalleryOpen]);
 
   // Global Loop
   useEffect(() => {
@@ -187,12 +192,18 @@ function UI() {
                  <div className="p-3 bg-gray-100 border-b-4 border-gray-200 font-black text-gray-700 text-center font-titan tracking-wider text-lg">
                     MENU
                  </div>
-                 <div className="p-2">
+                 <div className="p-2 flex flex-col gap-2">
                     <button 
                       onClick={() => toggleHallOfFame(true)}
                       className="w-full p-3 text-center text-gray-600 font-bold text-sm rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 font-titan tracking-wide active:scale-95"
                     >
                         HONOR BOARD
+                    </button>
+                    <button 
+                      onClick={() => setIsSkinGalleryOpen(true)}
+                      className="w-full p-3 text-center text-gray-600 font-bold text-sm rounded-xl hover:bg-purple-50 hover:text-purple-600 transition-all duration-200 font-titan tracking-wide active:scale-95"
+                    >
+                        SKIN GALLERY
                     </button>
                  </div>
               </div>
@@ -268,6 +279,74 @@ function UI() {
                </div>
              </div>
            </div>
+
+           {/* SKIN GALLERY MODAL */}
+           {isSkinGalleryOpen && (
+              <div className="absolute inset-0 z-[70] bg-black/80 backdrop-blur-lg flex items-center justify-center animate-pop">
+                 <div className="bg-[#151515] border-4 border-[#333] rounded-3xl w-full max-w-4xl mx-4 shadow-[0_0_60px_rgba(0,0,0,0.8)] overflow-hidden relative">
+                    
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-[#2c1e3e] to-[#1e1e2e] p-6 flex justify-between items-center border-b-4 border-[#000]/30 shadow-lg relative overflow-hidden">
+                       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 opacity-70"></div>
+                       <h2 className="text-4xl font-titan text-white tracking-wider drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] transform -rotate-1">
+                          <span className="text-[#d946ef]">SKIN</span> GALLERY
+                       </h2>
+                       <button 
+                         onClick={() => setIsSkinGalleryOpen(false)}
+                         className="bg-red-500 hover:bg-red-600 text-white rounded-xl w-10 h-10 flex items-center justify-center font-black text-xl shadow-[0_4px_0_#991b1b] active:shadow-none active:translate-y-1 transition-all"
+                       >
+                          ✕
+                       </button>
+                    </div>
+
+                    {/* Grid */}
+                    <div className="p-8 grid grid-cols-2 md:grid-cols-3 gap-6 bg-[#121212] max-h-[60vh] overflow-y-auto">
+                       {SKINS.map((skin) => {
+                          const isSelected = selectedSkin === skin.id;
+                          return (
+                             <div 
+                                key={skin.id}
+                                onClick={() => setSkin(skin.id)}
+                                className={`relative bg-[#1e1e1e] rounded-2xl p-4 border-4 transition-all duration-200 cursor-pointer hover:scale-105 group
+                                   ${isSelected ? 'border-[#4ade80] shadow-[0_0_20px_rgba(74,222,128,0.3)]' : 'border-[#333] hover:border-gray-500'}
+                                `}
+                             >
+                                {/* Preview Circle */}
+                                <div className="aspect-square rounded-full mb-4 relative overflow-hidden shadow-inner bg-black/50 flex items-center justify-center">
+                                   <div 
+                                      className={`w-[70%] h-[70%] rounded-full shadow-[inset_0_-10px_20px_rgba(0,0,0,0.5)] relative
+                                         ${skin.type === 'legendary' ? 'animate-pulse shadow-[0_0_30px_#00ffff]' : ''}
+                                      `}
+                                      style={{ 
+                                         backgroundColor: skin.color,
+                                         boxShadow: skin.type === 'legendary' ? '0 0 20px cyan, inset 0 0 20px white' : undefined
+                                      }}
+                                   >
+                                      {skin.type === 'legendary' && (
+                                         <div className="absolute inset-0 border-4 border-white/50 rounded-full animate-ping opacity-50"></div>
+                                      )}
+                                   </div>
+                                </div>
+
+                                <div className="text-center">
+                                   <h3 className={`font-titan text-xl tracking-wide drop-shadow-md ${skin.type === 'legendary' ? 'text-[#00ffff]' : 'text-white'}`}>
+                                      {skin.name}
+                                   </h3>
+                                   <div className="mt-2">
+                                      {isSelected ? (
+                                         <span className="bg-[#4ade80] text-black font-black text-xs px-3 py-1 rounded-full">SELECTED</span>
+                                      ) : (
+                                         <span className="bg-gray-700 text-gray-300 font-bold text-xs px-3 py-1 rounded-full group-hover:bg-white group-hover:text-black transition-colors">SELECT</span>
+                                      )}
+                                   </div>
+                                </div>
+                             </div>
+                          );
+                       })}
+                    </div>
+                 </div>
+              </div>
+           )}
 
            {/* HALL OF FAME MODAL */}
            {isHallOfFameOpen && (

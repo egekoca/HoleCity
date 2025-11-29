@@ -4,7 +4,7 @@ import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { useStore } from '../../store/gameStore';
 import { gameState } from '../../utils/gameState';
-import { MAP_LIMIT } from '../../utils/constants';
+import { MAP_LIMIT, SKINS } from '../../utils/constants';
 import DeepHole from './DeepHole';
 
 function PlayerHole() {
@@ -21,6 +21,8 @@ function PlayerHole() {
   const eatEntity = useStore((s) => s.eatEntity);
   const bots = useStore((s) => s.bots);
   const bombHitTime = useStore((s) => s.bombHitTime); 
+  const selectedSkin = useStore((s) => s.selectedSkin); // Skin bilgisini al
+  const skins = useStore.getState().skins; // veya constants'tan alabiliriz ama store daha temiz olur
 
   useFrame((state, dt) => {
     if (!ref.current || isGameOver) return;
@@ -91,7 +93,9 @@ function PlayerHole() {
   });
 
   const isHit = Date.now() - bombHitTime < 1000;
-  const holeColor = isHit ? "#ff0000" : "#2980b9"; 
+  const selectedSkinData = SKINS.find(s => s.id === selectedSkin);
+  const baseColor = selectedSkinData ? selectedSkinData.color : "#2980b9";
+  const holeColor = isHit ? "#ff0000" : baseColor; 
 
   return (
     <group ref={ref} position={[0, 0, 0]}>
@@ -107,7 +111,7 @@ function PlayerHole() {
         YOU
       </Text>
       <group ref={holeGroupRef}>
-        <DeepHole scale={1} color={holeColor} isPlayer={true} />
+        <DeepHole scale={1} color={holeColor} isPlayer={true} skinId={selectedSkin} />
       </group>
     </group>
   );

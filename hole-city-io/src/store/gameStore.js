@@ -21,6 +21,10 @@ export const useStore = create((set, get) => ({
   isHallOfFameOpen: false,
   honorBoardData: [], 
 
+  // Skin
+  selectedSkin: 'default',
+  setSkin: (skinId) => set({ selectedSkin: skinId }),
+
   // Standart State
   score: 0,
   holeScale: 1,
