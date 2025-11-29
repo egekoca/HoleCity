@@ -33,7 +33,7 @@ export const useStore = create((set, get) => ({
 
   tick: () => set((state) => {
     if (state.timeLeft <= 1) {
-      return { isGameOver: true, timeLeft: 0, gameOverReason: 'SÜRE BİTTİ!' };
+      return { isGameOver: true, timeLeft: 0, gameOverReason: "TIME'S UP!" };
     }
     return { timeLeft: state.timeLeft - 1 };
   }),
@@ -103,10 +103,9 @@ export const useStore = create((set, get) => ({
   getLeaderboard: () => {
     const state = get();
     const all = [
-      { id: 'player', name: 'SİZ', score: state.score, isMe: true },
+      { id: 'player', name: 'YOU', score: state.score, isMe: true },
       ...state.bots.map((b) => ({ ...b, isMe: false }))
     ];
     return all.sort((a, b) => b.score - a.score).slice(0, 10);
   }
 }));
-

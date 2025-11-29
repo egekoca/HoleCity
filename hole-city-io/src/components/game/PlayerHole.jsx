@@ -53,7 +53,7 @@ function PlayerHole() {
       if (holeScale > bot.scale * 1.2 && dist < holeScale * 0.8) {
         eatBot(bot.id);
       } else if (bot.scale > holeScale * 1.2 && dist < bot.scale * 0.8) {
-        endGame(bot.name + " sizi yuttu!");
+        endGame(bot.name + " swallowed you!");
       }
     }
   });
@@ -69,7 +69,7 @@ function PlayerHole() {
         outlineWidth={0.08}
         outlineColor="#2980b9"
       >
-        SİZ
+        YOU
       </Text>
       <group scale={[holeScale, 1, holeScale]}>
         <DeepHole scale={1} color="#2980b9" isPlayer={true} />
@@ -79,4 +79,3 @@ function PlayerHole() {
 }
 
 export default PlayerHole;
-

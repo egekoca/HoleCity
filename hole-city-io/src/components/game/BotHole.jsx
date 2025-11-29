@@ -71,4 +71,3 @@ function BotHole({ bot }) {
 }
 
 export default BotHole;
-
