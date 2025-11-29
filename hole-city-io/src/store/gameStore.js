@@ -5,6 +5,12 @@ import { playSound, playExplosion } from '../utils/audio';
 import { gameState } from '../utils/gameState';
 
 export const useStore = create((set, get) => ({
+  // Oyun Durumu
+  gameStatus: 'lobby', // 'lobby', 'playing'
+  playerName: 'Guest',
+  lastWinner: '---', // Son kazananın ismi
+  
+  // Standart State
   score: 0,
   holeScale: 1,
   timeLeft: GAME_DURATION,
@@ -14,39 +20,79 @@ export const useStore = create((set, get) => ({
   bots: [],
   objectsToRemove: new Set(),
   bombHitTime: 0,
-  
-  // Chat State
   chatMessages: [],
 
-  startGame: () => {
-    gameState.playerScale = 1;
-    gameState.bots = {};
+  // İlk Yükleme (Sayfa açılınca oyun arkada başlasın)
+  initGame: () => {
     set({
-      score: 0,
-      holeScale: 1,
-      timeLeft: GAME_DURATION,
-      isGameOver: false,
-      gameOverReason: '',
       objects: generateObjects(),
       bots: generateBots(),
-      objectsToRemove: new Set(),
-      bombHitTime: 0,
+      timeLeft: GAME_DURATION,
       chatMessages: [{ id: 1, sender: 'System', text: 'Welcome to Hole City FFA!', color: '#ffff00' }]
+    });
+  },
+
+  // Oyuncunun Odaya Girişi
+  joinGame: (name) => {
+    gameState.playerScale = 1;
+    gameState.playerPos.set(0, 0, 0); // Merkeze yakın doğ
+    
+    set({
+      gameStatus: 'playing',
+      playerName: name || 'Guest',
+      score: 0,
+      holeScale: 1,
+      isGameOver: false,
+      bombHitTime: 0,
+    });
+  },
+
+  // Lobiye Dönüş (ESC veya Ölünce) - Oyunu durdurmaz
+  returnToLobby: () => set({
+    gameStatus: 'lobby',
+    isGameOver: false
+  }),
+
+  // Tur Bittiğinde Reset (Otomatik)
+  resetRound: () => {
+    const state = get();
+    
+    // Kazananı belirle
+    const allPlayers = [
+      { name: state.playerName, score: state.score, active: state.gameStatus === 'playing' },
+      ...state.bots
+    ];
+    const winner = allPlayers.sort((a, b) => b.score - a.score)[0];
+    
+    set({
+      lastWinner: winner.name, // Kazananı kaydet
+      objects: generateObjects(),
+      bots: generateBots(),
+      timeLeft: GAME_DURATION,
+      isGameOver: false,
+      score: 0,
+      holeScale: 1,
+      gameStatus: 'lobby', // Lobiye at
+      objectsToRemove: new Set()
     });
   },
 
   addMessage: (sender, text, color = '#fff') => set((state) => {
     const newMsg = { id: Date.now() + Math.random(), sender, text, color };
-    // Son 15 mesajı tut
     return { chatMessages: [...state.chatMessages.slice(-14), newMsg] };
   }),
 
+  // Player ölünce
   endGame: (reason) => set({ isGameOver: true, gameOverReason: reason }),
 
   tick: () => set((state) => {
+    // Süre bitti mi?
     if (state.timeLeft <= 1) {
-      return { isGameOver: true, timeLeft: 0, gameOverReason: "TIME'S UP!" };
+      // Turu bitir ve resetle
+      get().resetRound();
+      return { timeLeft: GAME_DURATION };
     }
+    
     return { timeLeft: state.timeLeft - 1 };
   }),
 
@@ -166,8 +212,12 @@ export const useStore = create((set, get) => ({
 
   getLeaderboard: () => {
     const state = get();
+    const playerEntry = state.gameStatus === 'playing' 
+      ? [{ id: 'player', name: state.playerName, score: state.score, isMe: true }]
+      : []; 
+      
     const all = [
-      { id: 'player', name: 'YOU', score: state.score, isMe: true },
+      ...playerEntry,
       ...state.bots.map((b) => ({ ...b, isMe: false }))
     ];
     return all.sort((a, b) => b.score - a.score).slice(0, 10);

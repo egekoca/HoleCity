@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore } from '../../store/gameStore';
 import { MAP_SIZE } from '../../utils/constants';
@@ -8,14 +9,25 @@ import PlayerHole from './PlayerHole';
 import BotHole from './BotHole';
 import GameObject from './GameObject';
 
+function SpectatorCamera() {
+  const { camera } = useThree();
+  
+  useFrame(() => {
+    // İzleyici Kamerası: Haritanın ortasında dönüyor
+    const time = Date.now() * 0.0001;
+    const radius = 80;
+    camera.position.x = Math.sin(time) * radius;
+    camera.position.z = Math.cos(time) * radius;
+    camera.position.y = 60;
+    camera.lookAt(0, 0, 0);
+  });
+  return null;
+}
+
 function Scene() {
   const objects = useStore((s) => s.objects);
   const bots = useStore((s) => s.bots);
-  const startGame = useStore((s) => s.startGame);
-
-  useEffect(() => {
-    startGame();
-  }, [startGame]);
+  const gameStatus = useStore((s) => s.gameStatus); // 'lobby' or 'playing'
 
   return (
     <>
@@ -52,7 +64,9 @@ function Scene() {
 
       <Roads />
       <Spawner />
-      <PlayerHole />
+      
+      {/* Oyun durumuna göre PlayerHole veya Kamera */}
+      {gameStatus === 'playing' ? <PlayerHole /> : <SpectatorCamera />}
 
       {bots.map((b) => (
         <BotHole key={b.id} bot={b} />
