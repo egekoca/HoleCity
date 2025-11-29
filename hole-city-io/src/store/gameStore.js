@@ -6,10 +6,14 @@ import { gameState } from '../utils/gameState';
 
 export const useStore = create((set, get) => ({
   // Oyun Durumu
-  gameStatus: 'lobby', // 'lobby', 'playing'
+  gameStatus: 'lobby', 
   playerName: 'Guest',
-  lastWinner: '---', // Son kazananın ismi
+  lastWinner: '---', // Bu odanın (FFA-1) son kazananı
   
+  // Global Duyurular (Diğer odalar)
+  globalAnnouncements: [],
+  isHallOfFameOpen: false, // New: Onur Tablosu
+
   // Standart State
   score: 0,
   holeScale: 1,
@@ -22,20 +26,23 @@ export const useStore = create((set, get) => ({
   bombHitTime: 0,
   chatMessages: [],
 
-  // İlk Yükleme (Sayfa açılınca oyun arkada başlasın)
+  // İlk Yükleme
   initGame: () => {
     set({
       objects: generateObjects(),
       bots: generateBots(),
       timeLeft: GAME_DURATION,
-      chatMessages: [{ id: 1, sender: 'System', text: 'Welcome to Hole City FFA!', color: '#ffff00' }]
+      chatMessages: [{ id: 1, sender: 'System', text: 'Welcome to WHOLECITY FFA!', color: '#ffff00' }],
+      isHallOfFameOpen: false
     });
   },
+
+  toggleHallOfFame: (isOpen) => set({ isHallOfFameOpen: isOpen }),
 
   // Oyuncunun Odaya Girişi
   joinGame: (name) => {
     gameState.playerScale = 1;
-    gameState.playerPos.set(0, 0, 0); // Merkeze yakın doğ
+    gameState.playerPos.set(0, 0, 0); 
     
     set({
       gameStatus: 'playing',
@@ -47,17 +54,16 @@ export const useStore = create((set, get) => ({
     });
   },
 
-  // Lobiye Dönüş (ESC veya Ölünce) - Oyunu durdurmaz
+  // Lobiye Dönüş
   returnToLobby: () => set({
     gameStatus: 'lobby',
     isGameOver: false
   }),
 
-  // Tur Bittiğinde Reset (Otomatik)
+  // Tur Bittiğinde Reset
   resetRound: () => {
     const state = get();
     
-    // Kazananı belirle
     const allPlayers = [
       { name: state.playerName, score: state.score, active: state.gameStatus === 'playing' },
       ...state.bots
@@ -65,34 +71,38 @@ export const useStore = create((set, get) => ({
     const winner = allPlayers.sort((a, b) => b.score - a.score)[0];
     
     set({
-      lastWinner: winner.name, // Kazananı kaydet
+      lastWinner: winner.name,
       objects: generateObjects(),
       bots: generateBots(),
       timeLeft: GAME_DURATION,
       isGameOver: false,
       score: 0,
       holeScale: 1,
-      gameStatus: 'lobby', // Lobiye at
+      gameStatus: 'lobby',
       objectsToRemove: new Set()
     });
   },
+
+  // Global Olay Simülasyonu (Dışarıdan çağrılacak)
+  addGlobalAnnouncement: (text) => set(state => ({
+    globalAnnouncements: [
+      { id: Date.now(), text, color: '#4ade80' }, // Yeşil
+      ...state.globalAnnouncements
+    ].slice(0, 3) // Sadece en yeni 3 tanesini tut
+  })),
 
   addMessage: (sender, text, color = '#fff') => set((state) => {
     const newMsg = { id: Date.now() + Math.random(), sender, text, color };
     return { chatMessages: [...state.chatMessages.slice(-14), newMsg] };
   }),
 
-  // Player ölünce
   endGame: (reason) => set({ isGameOver: true, gameOverReason: reason }),
 
   tick: () => set((state) => {
-    // Süre bitti mi?
     if (state.timeLeft <= 1) {
-      // Turu bitir ve resetle
       get().resetRound();
       return { timeLeft: GAME_DURATION };
     }
-    
     return { timeLeft: state.timeLeft - 1 };
   }),
 
