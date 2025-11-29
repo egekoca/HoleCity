@@ -30,6 +30,10 @@ function UI() {
   const globalAnnouncements = useStore((s) => s.globalAnnouncements);
   const isHallOfFameOpen = useStore((s) => s.isHallOfFameOpen);
   const toggleHallOfFame = useStore((s) => s.toggleHallOfFame);
+  const connectWallet = useStore((s) => s.connectWallet);
+  const walletAddress = useStore((s) => s.walletAddress);
+  const isWalletConnected = useStore((s) => s.isWalletConnected);
+  const savedNickname = useStore((s) => s.nickname); // Store'dan gelen kaydedilmiş nick
   
   const [leaderboard, setLeaderboard] = useState([]);
   const [coords, setCoords] = useState({ x: 0, z: 0 });
@@ -39,6 +43,11 @@ function UI() {
   const [error, setError] = useState('');
   const [visibleAnnouncement, setVisibleAnnouncement] = useState(null);
   const chatEndRef = useRef(null);
+
+  // Nickname güncelleme
+  useEffect(() => {
+     if (savedNickname) setNickname(savedNickname);
+  }, [savedNickname]);
 
   // Initial Load
   useEffect(() => {
@@ -132,8 +141,13 @@ function UI() {
   const handleChatSubmit = (e) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
-    addMessage(gameStatus === 'playing' ? 'YOU' : 'Guest', chatInput, '#fff');
+    addMessage(gameStatus === 'playing' ? (nickname || 'YOU') : 'Guest', chatInput, '#fff');
     setChatInput('');
+  };
+
+  const handleConnect = (e) => {
+      e.preventDefault();
+      connectWallet();
   };
 
   const handleJoin = (e) => {
@@ -195,37 +209,55 @@ function UI() {
            {/* MAIN LOBBY BOX */}
            <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-auto bg-black/60 backdrop-blur-[4px]">
              <div className="bg-[#f0f0f0] rounded-3xl p-2 shadow-[0_0_50px_rgba(0,0,0,0.8)] max-w-sm w-full mx-4 border-8 border-white">
+               {/* Header */}
                <div className="bg-white rounded-t-2xl p-6 text-center border-b-4 border-gray-200">
                  <h1 className="text-6xl font-black text-black font-titan tracking-tighter transform -rotate-2 drop-shadow-xl">
                    WHOLE<span className="text-[#ff3333]">CITY</span>
                  </h1>
+                 {isWalletConnected && walletAddress && (
+                    <div className="mt-2 text-[10px] font-bold text-gray-400 bg-gray-100 py-1 px-3 rounded-full inline-block border border-gray-200 font-mono">
+                       Wallet: {walletAddress.slice(0,6)}...{walletAddress.slice(-4)}
+                    </div>
+                 )}
                </div>
                
                <div className="p-6 flex flex-col gap-4 bg-gray-50 rounded-b-2xl">
-                 <div className="flex gap-2">
-                   <input 
-                     type="text" 
-                     placeholder="Nickname" 
-                     value={nickname}
-                     onChange={(e) => setNickname(e.target.value)}
-                     className="flex-1 border-4 border-gray-300 rounded-xl px-4 py-3 font-black text-lg focus:border-blue-500 focus:outline-none text-gray-800 placeholder-gray-400 transition-colors shadow-inner"
-                     maxLength={15}
-                   />
-                   <div className="border-4 border-gray-300 rounded-xl px-3 py-3 font-black text-gray-500 bg-gray-200 cursor-not-allowed flex items-center justify-center shadow-inner">
-                     FFA-1
-                   </div>
-                 </div>
-
-                 <button 
-                   onClick={handleJoin}
-                   className="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white font-titan py-4 rounded-xl text-2xl shadow-[0_6px_0_#1d4ed8] active:shadow-none active:translate-y-1.5 transition-all border-2 border-blue-400"
-                 >
-                   PLAY
-                 </button>
                  
-                 <div className="w-full bg-[#eab308] hover:bg-[#ca8a04] text-white font-titan py-3 rounded-xl text-center text-lg shadow-[0_4px_0_#a16207] cursor-pointer active:shadow-none active:translate-y-1 transition-all border-2 border-yellow-300">
-                   SPECTATE
-                 </div>
+                 {!isWalletConnected ? (
+                    <button 
+                      onClick={handleConnect}
+                      className="w-full bg-[#f6851b] hover:bg-[#e2761b] text-white font-titan py-4 rounded-xl text-xl shadow-[0_6px_0_#cd6116] active:shadow-none active:translate-y-1.5 transition-all border-2 border-orange-400 flex items-center justify-center gap-3 group"
+                    >
+                      <span className="text-2xl group-hover:rotate-12 transition-transform">🦊</span> CONNECT WALLET
+                    </button>
+                 ) : (
+                    <>
+                        <div className="flex gap-2">
+                            <input 
+                                type="text" 
+                                placeholder="Nickname" 
+                                value={nickname}
+                                onChange={(e) => setNickname(e.target.value)}
+                                className="flex-1 border-4 border-gray-300 rounded-xl px-4 py-3 font-black text-lg focus:border-blue-500 focus:outline-none text-gray-800 placeholder-gray-400 transition-colors shadow-inner"
+                                maxLength={15}
+                            />
+                            <div className="border-4 border-gray-300 rounded-xl px-3 py-3 font-black text-gray-500 bg-gray-200 cursor-not-allowed flex items-center justify-center shadow-inner">
+                                FFA-1
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={handleJoin}
+                            className="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white font-titan py-4 rounded-xl text-2xl shadow-[0_6px_0_#1d4ed8] active:shadow-none active:translate-y-1.5 transition-all border-2 border-blue-400"
+                        >
+                            PLAY
+                        </button>
+                        
+                        <div className="w-full bg-[#eab308] hover:bg-[#ca8a04] text-white font-titan py-3 rounded-xl text-center text-lg shadow-[0_4px_0_#a16207] cursor-pointer active:shadow-none active:translate-y-1 transition-all border-2 border-yellow-300">
+                            SPECTATE
+                        </div>
+                    </>
+                 )}
 
                  <div className="grid grid-cols-2 gap-3 text-xs text-gray-700 font-bold mt-2 bg-gray-200 p-3 rounded-xl shadow-inner">
                    <label className="flex items-center gap-2 cursor-pointer select-none"><input type="checkbox" defaultChecked className="accent-blue-600 w-4 h-4" readOnly /> Show Names</label>

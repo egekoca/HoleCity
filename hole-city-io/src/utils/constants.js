@@ -2,7 +2,7 @@
 export const GAME_DURATION = 180;
 export const MAP_SIZE = 220;
 export const MAP_LIMIT = MAP_SIZE / 2 - 5;
-export const OBJECT_COUNT = 800;
+export const OBJECT_COUNT = 450;
 export const BOT_COUNT = 8;
 export const HOLE_DEPTH = 50;
 export const HOLE_EXPANSION = 2.0;

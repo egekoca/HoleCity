@@ -10,6 +10,9 @@ import DeepHole from './DeepHole';
 function PlayerHole() {
   const ref = useRef();
   const holeGroupRef = useRef();
+  const cameraTarget = useRef(new THREE.Vector3(0, 0, 0)); // Smooth lookAt target
+  const targetPosRef = useRef(new THREE.Vector3()); // Reusable target pos
+  const targetLookAtRef = useRef(new THREE.Vector3()); // Reusable target lookAt
   const { camera } = useThree();
   
   // Re-render'a sebep olacak stateleri al
@@ -62,8 +65,14 @@ function PlayerHole() {
     const camHeight = 30 + currentScale * 6;
     const camDist = 18 + currentScale * 4;
     
-    camera.position.lerp(new THREE.Vector3(pos.x + shakeX, camHeight, pos.z + camDist + shakeZ), 0.05);
-    camera.lookAt(pos.x + shakeX, -10, pos.z + shakeZ);
+    targetPosRef.current.set(pos.x + shakeX, camHeight, pos.z + camDist + shakeZ);
+    targetLookAtRef.current.set(pos.x + shakeX, -10, pos.z + shakeZ);
+
+    const smoothFactor = 1 - Math.pow(0.001, dt);
+
+    camera.position.lerp(targetPosRef.current, smoothFactor);
+    cameraTarget.current.lerp(targetLookAtRef.current, smoothFactor);
+    camera.lookAt(cameraTarget.current);
 
     // Bot yeme
     for (const bot of bots) {

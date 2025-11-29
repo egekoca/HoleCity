@@ -3,16 +3,22 @@ import { GAME_DURATION, OBJECT_COUNT } from '../utils/constants';
 import { generateObjects, generateBots, createObject } from '../utils/helpers';
 import { playSound, playExplosion } from '../utils/audio';
 import { gameState } from '../utils/gameState';
+import { supabase } from '../utils/supabase';
 
 export const useStore = create((set, get) => ({
   // Oyun Durumu
   gameStatus: 'lobby', 
   playerName: 'Guest',
-  lastWinner: '---', // Bu odanın (FFA-1) son kazananı
+  lastWinner: '---',
   
-  // Global Duyurular (Diğer odalar)
+  // Web3 / Cüzdan
+  walletAddress: null,
+  isWalletConnected: false,
+
+  // Global Duyurular ve Veriler
   globalAnnouncements: [],
-  isHallOfFameOpen: false, // New: Onur Tablosu
+  isHallOfFameOpen: false,
+  honorBoardData: [], // Supabase'den gelecek
 
   // Standart State
   score: 0,
@@ -35,15 +41,94 @@ export const useStore = create((set, get) => ({
       chatMessages: [{ id: 1, sender: 'System', text: 'Welcome to WHOLECITY FFA!', color: '#ffff00' }],
       isHallOfFameOpen: false
     });
+    get().fetchHonorBoard(); // Başlangıçta veriyi çek
   },
 
-  toggleHallOfFame: (isOpen) => set({ isHallOfFameOpen: isOpen }),
+  toggleHallOfFame: (isOpen) => {
+    if (isOpen) get().fetchHonorBoard(); // Açılırken güncelle
+    set({ isHallOfFameOpen: isOpen });
+  },
+
+  connectWallet: async () => {
+    if (typeof window.ethereum !== 'undefined') {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const account = accounts[0];
+        
+        // 1. Supabase'e Kullanıcıyı Kaydet (Upsert)
+        await supabase
+          .from('players')
+          .upsert({ wallet_address: account, last_seen: new Date() }, { onConflict: 'wallet_address' });
+
+        // 2. Kayıtlı Nick'i LocalStorage'dan çek
+        const savedNick = localStorage.getItem(`nick_${account}`);
+        
+        set({ 
+          walletAddress: account, 
+          isWalletConnected: true,
+          playerName: savedNick || '' 
+        });
+
+        // 3. Honor Board'u Güncelle
+        get().fetchHonorBoard();
+
+      } catch (error) {
+        console.error("Connection Error", error);
+      }
+    } else {
+      alert("Please install MetaMask!");
+    }
+  },
+
+  saveGameResult: async () => {
+     const state = get();
+     if (!state.walletAddress) return;
+
+     // Skoru Supabase'e kaydet
+     const { error } = await supabase
+        .from('game_results')
+        .insert({
+           wallet_address: state.walletAddress,
+           nickname: state.playerName,
+           score: state.score,
+           room_id: 'FFA-1', // Şimdilik sabit oda
+        });
+        
+     if (!error) get().fetchHonorBoard();
+  },
+
+  fetchHonorBoard: async () => {
+     // En yüksek 10 skoru çek
+     const { data, error } = await supabase
+        .from('game_results')
+        .select('*')
+        .order('score', { ascending: false })
+        .limit(10);
+
+     if (data) {
+        const formatted = data.map((item) => ({
+           id: item.id,
+           name: item.room_id || 'FFA-1',
+           winner: item.nickname || 'Anonymous',
+           score: item.score,
+           best: item.nickname || 'Anonymous', // Şimdilik kazananı en iyi kabul edelim
+           bestScore: item.score,
+           time: new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }));
+        set({ honorBoardData: formatted });
+     }
+  },
 
   // Oyuncunun Odaya Girişi
   joinGame: (name) => {
     gameState.playerScale = 1;
     gameState.playerPos.set(0, 0, 0); 
     
+    const state = get();
+    if (state.walletAddress) {
+       localStorage.setItem(`nick_${state.walletAddress}`, name);
+    }
+
     set({
       gameStatus: 'playing',
       playerName: name || 'Guest',
@@ -54,13 +139,11 @@ export const useStore = create((set, get) => ({
     });
   },
 
-  // Lobiye Dönüş
   returnToLobby: () => set({
     gameStatus: 'lobby',
     isGameOver: false
   }),
 
-  // Tur Bittiğinde Reset
   resetRound: () => {
     const state = get();
     
@@ -70,6 +153,11 @@ export const useStore = create((set, get) => ({
     ];
     const winner = allPlayers.sort((a, b) => b.score - a.score)[0];
     
+    // Eğer kazanan oyuncuysa skoru kaydet
+    if (winner.active && state.walletAddress) {
+        get().saveGameResult();
+    }
+
     set({
       lastWinner: winner.name,
       objects: generateObjects(),
@@ -83,12 +171,11 @@ export const useStore = create((set, get) => ({
     });
   },
 
-  // Global Olay Simülasyonu (Dışarıdan çağrılacak)
   addGlobalAnnouncement: (text) => set(state => ({
     globalAnnouncements: [
-      { id: Date.now(), text, color: '#4ade80' }, // Yeşil
+      { id: Date.now(), text, color: '#4ade80' },
       ...state.globalAnnouncements
-    ].slice(0, 3) // Sadece en yeni 3 tanesini tut
+    ].slice(0, 3)
   })),
 
   addMessage: (sender, text, color = '#fff') => set((state) => {
@@ -96,7 +183,14 @@ export const useStore = create((set, get) => ({
     return { chatMessages: [...state.chatMessages.slice(-14), newMsg] };
   }),
 
-  endGame: (reason) => set({ isGameOver: true, gameOverReason: reason }),
+  endGame: (reason) => {
+    const state = get();
+    // Oyun bittiğinde skoru kaydet
+    if (state.gameStatus === 'playing' && state.walletAddress) {
+        get().saveGameResult();
+    }
+    set({ isGameOver: true, gameOverReason: reason });
+  },
 
   tick: () => set((state) => {
     if (state.timeLeft <= 1) {
