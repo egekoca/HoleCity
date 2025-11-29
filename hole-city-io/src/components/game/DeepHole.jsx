@@ -10,6 +10,20 @@ const DeepHole = memo(function DeepHole({ scale, color, isPlayer }) {
 
   return (
     <group>
+      {/* --- MASKE (Zemin ve Yolların görünmemesi için) --- */}
+      {/* Bu görünmez disk, stencil buffer'a '1' yazar. Zemin '1' olmayan yere çizilir. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.1, 0]} renderOrder={-1}>
+        <circleGeometry args={[radius * 0.92, 48]} />
+        <meshBasicMaterial
+          colorWrite={false}
+          depthWrite={false}
+          stencilWrite={true}
+          stencilRef={1}
+          stencilFunc={THREE.AlwaysStencilFunc}
+          stencilZPass={THREE.ReplaceStencilOp}
+        />
+      </mesh>
+
       {/* Üst kenar - parlak halka */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 0]}>
         <ringGeometry args={[radius * 0.92, radius * 1.1, 48]} />

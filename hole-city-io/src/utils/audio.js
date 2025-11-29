@@ -1,32 +1,74 @@
-// --- SES SİSTEMİ ---
+// Web Audio API
 let audioCtx = null;
 
-export const initAudio = () => {
-  if (!audioCtx) {
-    try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    } catch (e) {
-      console.warn('Audio context could not be created');
-    }
-  }
-  if (audioCtx?.state === 'suspended') {
-    audioCtx.resume();
-  }
-};
-
-export const playSound = (freq = 350) => {
-  if (!audioCtx) return;
+export function initAudio() {
   try {
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-    oscillator.frequency.value = freq;
-    gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-    oscillator.connect(gainNode).connect(audioCtx.destination);
-    oscillator.start();
-    oscillator.stop(audioCtx.currentTime + 0.1);
+    if (!audioCtx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) {
+        audioCtx = new AudioContext();
+        console.log("AudioContext created");
+      }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume().then(() => {
+        console.log("AudioContext resumed");
+      });
+    }
   } catch (e) {
-    console.warn('Sound could not be played');
+    console.error("Audio init error:", e);
   }
-};
+}
 
+export function playSound(freq = 400) {
+  if (!audioCtx) {
+    // Ses çalınmaya çalışılıyor ama context yoksa başlatmayı dene
+    initAudio();
+    if (!audioCtx) return;
+  }
+
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.5, audioCtx.currentTime + 0.1);
+
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.15);
+  } catch (e) {
+    console.error("PlaySound error:", e);
+  }
+}
+
+// Patlama Sesi
+export function playExplosion() {
+  if (!audioCtx) return;
+
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.5);
+
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.5);
+  } catch (e) {
+    console.error("PlayExplosion error:", e);
+  }
+}

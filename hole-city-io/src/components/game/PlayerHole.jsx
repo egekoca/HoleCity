@@ -9,15 +9,26 @@ import DeepHole from './DeepHole';
 
 function PlayerHole() {
   const ref = useRef();
+  const holeGroupRef = useRef();
   const { camera } = useThree();
-  const holeScale = useStore((s) => s.holeScale);
+  
+  // Re-render'a sebep olacak stateleri al
   const isGameOver = useStore((s) => s.isGameOver);
   const endGame = useStore((s) => s.endGame);
   const eatEntity = useStore((s) => s.eatEntity);
   const bots = useStore((s) => s.bots);
+  const bombHitTime = useStore((s) => s.bombHitTime); 
 
   useFrame((state, dt) => {
     if (!ref.current || isGameOver) return;
+
+    // Store'dan anlık scale değerini al (re-render beklemeden)
+    const currentScale = useStore.getState().holeScale;
+
+    // Scale'i doğrudan uygula (Anlık Tepki)
+    if (holeGroupRef.current) {
+        holeGroupRef.current.scale.set(currentScale, 1, currentScale);
+    }
 
     const pos = ref.current.position;
     const px = state.pointer.x;
@@ -33,14 +44,26 @@ function PlayerHole() {
     pos.x = THREE.MathUtils.clamp(pos.x, -MAP_LIMIT, MAP_LIMIT);
     pos.z = THREE.MathUtils.clamp(pos.z, -MAP_LIMIT, MAP_LIMIT);
 
+    // --- Bomba Efekti (Titreme) ---
+    const timeSinceBomb = Date.now() - bombHitTime;
+    let shakeX = 0;
+    let shakeZ = 0;
+    
+    if (timeSinceBomb < 1000) { 
+       const intensity = 1 - (timeSinceBomb / 1000);
+       shakeX = (Math.random() - 0.5) * intensity * 0.5;
+       shakeZ = (Math.random() - 0.5) * intensity * 0.5;
+    }
+
     gameState.playerPos.set(pos.x, 0, pos.z);
-    gameState.playerScale = holeScale;
+    gameState.playerScale = currentScale;
 
     // Kamera
-    const camHeight = 30 + holeScale * 6;
-    const camDist = 18 + holeScale * 4;
-    camera.position.lerp(new THREE.Vector3(pos.x, camHeight, pos.z + camDist), 0.05);
-    camera.lookAt(pos.x, -10, pos.z);
+    const camHeight = 30 + currentScale * 6;
+    const camDist = 18 + currentScale * 4;
+    
+    camera.position.lerp(new THREE.Vector3(pos.x + shakeX, camHeight, pos.z + camDist + shakeZ), 0.05);
+    camera.lookAt(pos.x + shakeX, -10, pos.z + shakeZ);
 
     // Bot yeme
     for (const bot of bots) {
@@ -50,29 +73,32 @@ function PlayerHole() {
       const dz = pos.z - b.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
 
-      if (holeScale > bot.scale * 1.2 && dist < holeScale * 0.8) {
+      if (currentScale > bot.scale * 1.2 && dist < currentScale * 0.8) {
         eatEntity('player', bot.id);
-      } else if (bot.scale > holeScale * 1.2 && dist < bot.scale * 0.8) {
+      } else if (bot.scale > currentScale * 1.2 && dist < bot.scale * 0.8) {
         endGame(bot.name + " swallowed you!");
       }
     }
   });
+
+  const isHit = Date.now() - bombHitTime < 1000;
+  const holeColor = isHit ? "#ff0000" : "#2980b9"; 
 
   return (
     <group ref={ref} position={[0, 0, 0]}>
       <Text
         position={[0, 3, 0]}
         fontSize={0.9}
-        color="#fff"
+        color={isHit ? "#ff0000" : "#fff"} 
         anchorX="center"
         anchorY="middle"
         outlineWidth={0.08}
-        outlineColor="#2980b9"
+        outlineColor={isHit ? "#000" : "#2980b9"}
       >
         YOU
       </Text>
-      <group scale={[holeScale, 1, holeScale]}>
-        <DeepHole scale={1} color="#2980b9" isPlayer={true} />
+      <group ref={holeGroupRef}>
+        <DeepHole scale={1} color={holeColor} isPlayer={true} />
       </group>
     </group>
   );

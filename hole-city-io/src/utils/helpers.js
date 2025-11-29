@@ -35,11 +35,11 @@ function getNearestRoadCoord(coord) {
 }
 
 // Nesne tipi seçici
-function getRandomType(category) {
-  let filtered = objectTypes;
-  if (category === 'building') {
-    filtered = objectTypes.filter(t => ['building', 'tower'].includes(t.type));
-  } else if (category === 'road') {
+  function getRandomType(category) {
+    let filtered = objectTypes;
+    if (category === 'building') {
+      filtered = objectTypes.filter(t => ['building', 'apartment', 'skyscraper', 'tower'].includes(t.type));
+    } else if (category === 'road') {
     filtered = objectTypes.filter(t => ['car', 'taxi', 'bus'].includes(t.type));
   } else if (category === 'sidewalk') {
     filtered = objectTypes.filter(t => ['human', 'dog', 'trash', 'hydrant', 'cone', 'bomb'].includes(t.type));
@@ -110,7 +110,7 @@ export function createObject(forceType = null, overrideX = null, overrideZ = nul
   // --- GÜVENLİK KONTROLLERİ ---
   
   // 1. Bina yolda olmasın
-  if (['building', 'tower'].includes(selected.type)) {
+  if (['building', 'tower', 'apartment', 'skyscraper'].includes(selected.type)) {
      const currentDistX = getDistToRoad(x);
      const currentDistZ = getDistToRoad(z);
      
@@ -173,7 +173,7 @@ export function generateObjects() {
         const centerZ = z + BLOCK_SIZE / 2;
         
         // Hafif rastgelelik (blok içinde)
-        const building = createObject('building', centerX + rnd(5), centerZ + rnd(5));
+        const building = createObject(null, centerX + rnd(5), centerZ + rnd(5));
         objects.push(building);
       }
     }

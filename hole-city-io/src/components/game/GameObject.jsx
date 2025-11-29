@@ -21,6 +21,13 @@ function GameObject({ data }) {
   const addBotScore = useStore((s) => s.addBotScore);
   const applyBombPenalty = useStore((s) => s.applyBombPenalty);
 
+  // Başlangıç rotasyonu hesaplama
+  const initialRotY = data.direction 
+     ? (data.direction.x !== 0 
+        ? (data.direction.x > 0 ? 0 : Math.PI) 
+        : (data.direction.z > 0 ? Math.PI / 2 : -Math.PI / 2))
+     : 0;
+
   useFrame((_, dt) => {
     if (!ref.current || physics.current.consumed) return;
 
@@ -44,9 +51,11 @@ function GameObject({ data }) {
 
       // Yönüne göre döndür
       if (data.direction.x !== 0) {
-         rot.y = data.direction.x > 0 ? Math.PI / 2 : -Math.PI / 2;
+         // Yatay Gidiş (X ekseni) -> Rotasyon 0
+         rot.y = data.direction.x > 0 ? 0 : Math.PI;
       } else {
-         rot.y = data.direction.z > 0 ? 0 : Math.PI;
+         // Dikey Gidiş (Z ekseni) -> Rotasyon 90 derece
+         rot.y = data.direction.z > 0 ? Math.PI / 2 : -Math.PI / 2;
       }
 
       // Harita sınırından dön (sonsuz trafik)
@@ -111,7 +120,8 @@ function GameObject({ data }) {
       holeCenter = { x: bestHole.x, z: bestHole.z };
       holeRadius = bestHole.radius;
       
-      const canSwallow = bestHole.radius > objSize * 0.35;
+      // YUTMA KONTROLÜ: Objeden belirgin şekilde büyük olmalı
+      const canSwallow = bestHole.radius > objSize * 0.8; 
       
       if (canSwallow) {
         const distFromEdge = distToBestHole - bestHole.radius;
@@ -215,8 +225,9 @@ function GameObject({ data }) {
            p.vz -= vNormal * (1.0 + BOUNCE_DAMPING) * normZ;
            p.wy += vNormal * 0.5;
 
+           // Çarpma sesi frekansını düşür (bombaya benzememesi için)
            if (vNormal > 1 && Date.now() - p.lastBounceTime > 100) {
-             playSound(100 + vNormal * 50);
+             playSound(50 + vNormal * 30); 
              p.lastBounceTime = Date.now();
            }
          }
@@ -233,18 +244,21 @@ function GameObject({ data }) {
     p.vy *= 0.999;
     
     // --- YUTULMA ---
+    
+    // 1. Bomba: Erken tetikleme
+    if (data.type === 'bomb' && pos.y < -2 && bestHole) {
+       physics.current.consumed = true;
+       applyBombPenalty(bestHole.id);
+       return;
+    }
+
+    // 2. Diğer Nesneler: Dibe çarpınca
     if (pos.y < -HOLE_DEPTH && bestHole) {
       physics.current.consumed = true;
-      
-      if (data.type === 'bomb') {
-         applyBombPenalty(bestHole.id);
+      if (bestHole.type === 'player') {
+        addPlayerScore(data.points, data.id);
       } else {
-         playSound(400);
-         if (bestHole.type === 'player') {
-           addPlayerScore(data.points, data.id);
-         } else {
-           addBotScore(bestHole.id, data.points, data.id);
-         }
+        addBotScore(bestHole.id, data.points, data.id);
       }
     }
     
@@ -255,9 +269,8 @@ function GameObject({ data }) {
 
   const Model = ModelComponents[data.type] || Human;
 
-  // Araçlar için doğru rotasyon
   return (
-    <group ref={ref} position={[data.x, 0, data.z]} rotation={[0, data.direction && !physics.current.vx ? (data.direction.x > 0 ? Math.PI/2 : data.direction.z > 0 ? 0 : Math.PI) : 0, 0]}>
+    <group ref={ref} position={[data.x, 0, data.z]} rotation={[0, initialRotY, 0]}>
       <Model color={data.color} size={data.size} />
     </group>
   );

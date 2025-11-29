@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { GAME_DURATION, OBJECT_COUNT } from '../utils/constants';
 import { generateObjects, generateBots, createObject } from '../utils/helpers';
-import { playSound } from '../utils/audio';
+import { playSound, playExplosion } from '../utils/audio'; // playExplosion eklenecek
 import { gameState } from '../utils/gameState';
 
 export const useStore = create((set, get) => ({
@@ -13,6 +13,7 @@ export const useStore = create((set, get) => ({
   objects: [],
   bots: [],
   objectsToRemove: new Set(),
+  bombHitTime: 0, // Bomba yeme zamanı (Efekt için)
 
   startGame: () => {
     gameState.playerScale = 1;
@@ -25,7 +26,8 @@ export const useStore = create((set, get) => ({
       gameOverReason: '',
       objects: generateObjects(),
       bots: generateBots(),
-      objectsToRemove: new Set()
+      objectsToRemove: new Set(),
+      bombHitTime: 0
     });
   },
 
@@ -70,14 +72,18 @@ export const useStore = create((set, get) => ({
   },
 
   applyBombPenalty: (entityId) => {
-    playSound(200); // Kötü ses efekti (daha düşük pitch)
+    playExplosion(); // Patlama sesi
     set((state) => {
        // Eğer OYUNCU ise
        if (entityId === 'player') {
           const newScore = Math.floor(state.score * 0.6); // %40 azalma
           const newScale = Math.max(1, 1 + newScore * 0.0004); // Minimum 1
           gameState.playerScale = newScale;
-          return { score: newScore, holeScale: newScale };
+          return { 
+            score: newScore, 
+            holeScale: newScale,
+            bombHitTime: Date.now() // Efekti tetikle
+          };
        }
        // Eğer BOT ise
        else {
@@ -102,11 +108,9 @@ export const useStore = create((set, get) => ({
     set((state) => {
       const preyBot = state.bots.find((b) => b.id === preyId);
       
-      // Eğer av bir bot ise ve listede varsa
       if (preyBot) {
-        const bonus = preyBot.score + 100; // Bot yeme bonusu
+        const bonus = preyBot.score + 100;
         
-        // Eğer avcı OYUNCU ise
         if (predatorId === 'player') {
            playSound(600);
            const newScore = state.score + bonus;
@@ -119,9 +123,7 @@ export const useStore = create((set, get) => ({
              holeScale: newScale,
              bots: state.bots.filter((b) => b.id !== preyId)
            };
-        } 
-        // Eğer avcı BAŞKA BİR BOT ise
-        else {
+        } else {
            const newBots = state.bots.map(b => {
              if (b.id === predatorId) {
                const newScore = b.score + bonus;
@@ -132,7 +134,7 @@ export const useStore = create((set, get) => ({
                return { ...b, score: newScore, scale: newScale };
              }
              return b;
-           }).filter(b => b.id !== preyId); // Avı listeden sil
+           }).filter(b => b.id !== preyId);
            
            delete gameState.bots[preyId];
            return { bots: newBots };

@@ -13,12 +13,12 @@ function BotHole({ bot }) {
   // Hedef ve durum
   const aiState = useRef({
     target: { x: rnd(MAP_SIZE - 40), z: rnd(MAP_SIZE - 40) },
-    mode: 'wander', // 'wander', 'chase', 'flee'
+    mode: 'wander', // 'wander', 'chase', 'flee', 'feed'
     changeTime: 0
   });
   
   const bots = useStore((s) => s.bots);
-  const objects = useStore((s) => s.objects); // Objeleri al (bomba kontrolü için)
+  const objects = useStore((s) => s.objects); 
   const eatEntity = useStore((s) => s.eatEntity);
   const endGame = useStore((s) => s.endGame);
   const applyBombPenalty = useStore((s) => s.applyBombPenalty);
@@ -85,20 +85,15 @@ function BotHole({ bot }) {
       }
     }
 
-    // c) Bomba Kontrolü (Sadece yakındaki bombaları tehlike say)
-    // Performans için her frame'de tüm objeleri taramak yerine sadece yakın tehlike yoksa bakılabilir
-    // Veya basitçe, en yakındaki objelerden bombayı bul
-    
-    // Basit optimizasyon: Sadece tehlike algılanmadıysa bomba ara
+    // c) Bomba Kontrolü
     if (minDangerDist > scale * 3) {
        for (const obj of objects) {
           if (obj.type === 'bomb') {
              const dist = Math.sqrt((pos.x - obj.x)**2 + (pos.z - obj.z)**2);
-             // Bombaya çok yakınsa ve içine düşebilecekse kaç
              if (dist < scale * 3 && scale > obj.size) {
                 if (dist < minDangerDist) {
                    minDangerDist = dist;
-                   nearestDanger = { x: obj.x, z: obj.z }; // Bombayı tehlike olarak işaretle
+                   nearestDanger = { x: obj.x, z: obj.z }; 
                 }
              }
           }
@@ -110,28 +105,58 @@ function BotHole({ bot }) {
     // KAÇMA (Öncelikli)
     if (minDangerDist < scale * 4 + 5) {
       ai.mode = 'flee';
-      // Tehlikeden uzaklaşan vektör
       const dx = pos.x - nearestDanger.x;
       const dz = pos.z - nearestDanger.z;
-      // Normalize et ve uzağa git
       const len = Math.sqrt(dx*dx + dz*dz);
       ai.target.x = pos.x + (dx/len) * 30;
       ai.target.z = pos.z + (dz/len) * 30;
+      ai.changeTime = now; // Kararı hemen uygula
     }
     // KOVALAMA
     else if (minPreyDist < scale * 5 + 15) {
       ai.mode = 'chase';
       ai.target.x = nearestPrey.x;
       ai.target.z = nearestPrey.z;
+      ai.changeTime = now;
     }
-    // GEZİNME
+    // BESLENME (Yiyecek Ara)
     else {
-      ai.mode = 'wander';
-      const distToTarget = Math.sqrt((pos.x - ai.target.x)**2 + (pos.z - ai.target.z)**2);
-      // Hedefe vardıysa veya çok zaman geçtiyse yeni hedef
-      if (distToTarget < 5 || now - ai.changeTime > 5000) {
-        ai.target = { x: rnd(MAP_SIZE - 40), z: rnd(MAP_SIZE - 40) };
-        ai.changeTime = now;
+      // Hedef güncelleme (sık sık değil)
+      if (!ai.target || now - ai.changeTime > 1500) {
+         ai.changeTime = now;
+         
+         let bestFood = null;
+         let bestScore = -Infinity;
+         
+         // Yakındaki değerli ve yenebilir nesneleri bul
+         for (const obj of objects) {
+            if (obj.type === 'bomb') continue;
+
+            // Yenebilir mi? (GameObject mantığı: radius > size * 0.8)
+            if (scale > obj.size * 0.8) {
+               const dx = pos.x - obj.x;
+               const dz = pos.z - obj.z;
+               const distSq = dx*dx + dz*dz; 
+               
+               if (distSq < 3600) { // 60 birim yarıçap
+                  // Puan / Mesafe^2 (Yakın ve değerli olanı seç)
+                  const score = obj.points / (distSq + 1);
+                  if (score > bestScore) {
+                     bestScore = score;
+                     bestFood = obj;
+                  }
+               }
+            }
+         }
+
+         if (bestFood) {
+            ai.mode = 'feed';
+            ai.target = { x: bestFood.x, z: bestFood.z };
+         } else {
+            ai.mode = 'wander';
+            // Rastgele ama harita içinde kalacak bir nokta
+            ai.target = { x: rnd(MAP_SIZE - 40), z: rnd(MAP_SIZE - 40) };
+         }
       }
     }
 
@@ -142,7 +167,9 @@ function BotHole({ bot }) {
     const dz = tz - pos.z;
     const dist = Math.sqrt(dx*dx + dz*dz);
     
-    const speed = 7; // Bot hızı
+    // Hızlandırma (Hard Mode)
+    const speed = 9; 
+    
     if (dist > 0.1) {
       pos.x += (dx / dist) * speed * dt;
       pos.z += (dz / dist) * speed * dt;

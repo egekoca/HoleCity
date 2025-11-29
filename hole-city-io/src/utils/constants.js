@@ -37,9 +37,11 @@ export const objectTypes = [
   { type: 'car', weight: 12, points: 50, size: 1.2 },
   { type: 'taxi', weight: 5, points: 55, size: 1.2 },
   { type: 'bus', weight: 4, points: 100, size: 1.8 },
-  { type: 'building', weight: 3, points: 200, size: 2.2 },
-  { type: 'tower', weight: 1, points: 500, size: 4.0 },
-  { type: 'bomb', weight: 0.8, points: -999, size: 1.5 } // Daha büyük ve belli
+  { type: 'building', weight: 6, points: 200, size: 2.2 }, // Weight artırıldı
+  { type: 'apartment', weight: 4, points: 350, size: 2.8 }, // Yeni
+  { type: 'tower', weight: 2, points: 500, size: 4.0 }, // Weight artırıldı
+  { type: 'skyscraper', weight: 1.5, points: 800, size: 5.0 }, // Yeni (Devasa)
+  { type: 'bomb', weight: 0.8, points: -999, size: 2.5 } // Daha da büyük
 ];
 
 export const totalWeight = objectTypes.reduce((s, t) => s + t.weight, 0);
